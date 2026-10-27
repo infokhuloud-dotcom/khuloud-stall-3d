@@ -1,0 +1,533 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Khuloud Stall Walkthrough</title>
+<meta name="description" content="Walk through the Khuloud Perfumes stall in 3D. Every print in its place.">
+<meta property="og:title" content="Khuloud Perfumes · Stall walkthrough">
+<meta property="og:description" content="Walk through our 10 × 10 ft stall in 3D. Tap Take the tour, or use the joystick to walk around.">
+<meta property="og:image" content="https://infokhuloud-dotcom.github.io/khuloud-stall-3d/og.jpg">
+<meta property="og:url" content="https://infokhuloud-dotcom.github.io/khuloud-stall-3d/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#120B14">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,600;1,500&family=Jost:wght@400;500;600&display=swap">
+<style>
+/* Layout: full-screen 3D stall, a slim header chip, viewpoint chips along the bottom, a prints drawer on the right. Single dark look, like the hall at night. */
+:root {
+  --night: #120B14; --plum: #321437; --plum-2: #4B2451; --gold: #D4AF37; --gold-soft: #F0D48A;
+  --cream: #FFF9EE; --muted: #CDBBD1; --glass: rgba(18, 11, 20, 0.82); --line: rgba(212, 175, 55, 0.35);
+  --serif: "Cormorant Garamond", Georgia, serif; --sans: "Jost", "Helvetica Neue", Arial, sans-serif;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body { background: var(--night); color: var(--cream); font-family: var(--sans); overflow: hidden; }
+#scene { position: fixed; inset: 0; display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+#scene.dragging { cursor: grabbing; }
+.chip { background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+header { box-sizing: border-box; position: fixed; left: 16px; top: calc(16px + env(safe-area-inset-top, 0px)); padding: 12px 16px; border-radius: 6px; max-width: min(420px, calc(100% - 32px)); display: grid; gap: 4px; z-index: 2; }
+header h1 { margin: 0; font-family: var(--serif); font-weight: 600; font-size: 1.55rem; line-height: 1; color: var(--gold); }
+header p { margin: 0; font-size: 0.8rem; line-height: 1.45; color: var(--muted); }
+header b { color: var(--cream); font-weight: 500; }
+button { font: inherit; color: var(--cream); cursor: pointer; }
+.btn { padding: 9px 14px; border-radius: 999px; font-size: 0.8rem; letter-spacing: 0.06em; }
+.btn:hover, .btn[aria-pressed="true"] { border-color: var(--gold); color: var(--gold-soft); }
+button:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+#views { position: fixed; left: 0; right: 0; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); padding-inline: 16px; display: flex; gap: 8px; overflow-x: auto; z-index: 2; scrollbar-width: none; }
+#views::-webkit-scrollbar { display: none; }
+#views button { flex: none; }
+#joy { position: fixed; left: 24px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); width: 128px; height: 128px; border-radius: 50%; z-index: 2; touch-action: none; user-select: none; -webkit-user-select: none; display: grid; place-items: center; }
+#joy::before { content: ""; position: absolute; inset: 22px; border-radius: 50%; border: 1px dashed var(--line); }
+#knob { width: 54px; height: 54px; border-radius: 50%; background: var(--gold); box-shadow: 0 4px 14px rgba(0,0,0,.45); transform: translate(0, 0); transition: transform .15s ease-out; display: grid; place-items: center; }
+#joy.active #knob { transition: none; }
+#knob svg { width: 22px; height: 22px; stroke: var(--plum); fill: none; stroke-width: 2; }
+#joyLabel { position: absolute; bottom: -20px; left: 0; right: 0; text-align: center; font-size: 0.66rem; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+.topright { position: fixed; right: 16px; top: calc(16px + env(safe-area-inset-top, 0px)); z-index: 2; display: flex; gap: 8px; }
+#tourBtn { background: var(--gold); color: var(--plum); border-color: var(--gold); font-weight: 600; }
+#tourBtn[aria-pressed="true"] { background: var(--glass); color: var(--gold-soft); }
+#caption { position: fixed; left: 50%; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); padding: 10px 16px; border-radius: 8px; z-index: 2; font-family: var(--serif); font-size: 1.2rem; font-weight: 600; color: var(--cream); text-align: center; max-width: min(560px, calc(100% - 32px)); pointer-events: none; }
+#drawer { position: fixed; right: 0; top: 0; bottom: 0; width: min(380px, 100%); z-index: 3; overflow-y: auto; padding: calc(20px + env(safe-area-inset-top, 0px)) 20px 24px; border-radius: 0; border-width: 0 0 0 1px; }
+#drawer h2 { margin: 0 0 4px; font-family: var(--serif); font-weight: 600; font-size: 1.6rem; color: var(--gold); }
+#drawer h3 { margin: 22px 0 8px; font-size: 0.72rem; letter-spacing: 0.22em; text-transform: uppercase; color: var(--gold-soft); font-weight: 600; }
+#drawer ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+#drawer li button { width: 100%; text-align: left; background: none; border: 0; padding: 8px 10px; border-radius: 4px; display: flex; justify-content: space-between; gap: 12px; font-size: 0.88rem; }
+#drawer li button:hover { background: rgba(212, 175, 55, 0.12); }
+#drawer li span:last-child { color: var(--muted); font-size: 0.78rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+#drawer .top { display: flex; justify-content: space-between; align-items: start; gap: 12px; }
+#drawer p { margin: 0; font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+.x { background: none; border: 1px solid var(--line); border-radius: 999px; width: 36px; height: 36px; flex: none; display: grid; place-items: center; }
+.x svg { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2; }
+#box { position: fixed; inset: 0; z-index: 4; background: rgba(8, 4, 10, 0.88); display: grid; place-items: center; padding: 16px; }
+#box figure { margin: 0; max-width: min(1000px, 100%); max-height: 100%; display: grid; gap: 12px; justify-items: center; }
+#box img { max-width: 100%; max-height: calc(100vh - 170px); object-fit: contain; border-radius: 2px; box-shadow: 0 20px 60px rgba(0,0,0,.5); background: #fff; }
+#box figcaption { text-align: center; display: grid; gap: 3px; }
+#box figcaption strong { font-family: var(--serif); font-size: 1.5rem; font-weight: 600; color: var(--gold); }
+#box figcaption span { font-size: 0.85rem; color: var(--muted); }
+#box .x { position: absolute; right: 16px; top: calc(16px + env(safe-area-inset-top, 0px)); }
+#loading { position: fixed; inset: 0; display: grid; place-items: center; z-index: 5; background: var(--night); }
+#loading div { display: grid; gap: 10px; justify-items: center; }
+#loading strong { font-family: var(--serif); font-size: 1.8rem; color: var(--gold); font-weight: 600; }
+#loading span { font-size: 0.8rem; color: var(--muted); letter-spacing: 0.1em; font-variant-numeric: tabular-nums; }
+#hint { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 8px 14px; border-radius: 999px; font-size: 0.85rem; pointer-events: none; z-index: 2; transition: opacity .6s; }
+@media (max-width: 640px) {
+  header { left: 12px; top: calc(12px + env(safe-area-inset-top, 0px)); padding: 9px 12px; max-width: calc(100% - 24px); }
+  header h1 { font-size: 1.2rem; } header p { font-size: 0.72rem; }
+  .topright { top: auto; right: 12px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); flex-direction: column; align-items: end; }
+  #views { padding-inline: 12px; } #caption { bottom: calc(232px + env(safe-area-inset-bottom, 0px)); font-size: 1.05rem; }
+}
+.touch-only { display: none; }
+@media (hover: none), (pointer: coarse) { .desk-only { display: none; } .touch-only { display: inline; } }
+@media (hover: hover) and (pointer: fine) { #joy { display: none; } }
+</style>
+</head>
+<body>
+<canvas id="scene" aria-label="3D model of the Khuloud stall. Drag to look around."></canvas>
+
+<header class="chip">
+  <h1>Khuloud stall · 10 × 10 ft</h1>
+  <p><span class="desk-only"><b>Drag</b> to look around. <b>W A S D</b> or arrow keys to walk.</span><span class="touch-only"><b>Swipe</b> to look around. Use the <b>gold joystick</b> to walk.</span> <b>Tap any print</b> to see it full size.</p>
+</header>
+<div class="topright"><button id="tourBtn" class="chip btn" aria-pressed="false">Take the tour</button><button id="allBtn" class="chip btn" aria-expanded="false" aria-controls="drawer">All prints</button></div>
+
+<nav id="views" aria-label="Viewpoints"></nav>
+
+<div id="joy" class="chip" role="application" aria-label="Joystick: drag the gold knob to walk"><div id="knob"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v16M4 12h16M12 4l-3 3M12 4l3 3M12 20l-3-3M12 20l3-3M4 12l3-3M4 12l3 3M20 12l-3-3M20 12l-3 3"/></svg></div><span id="joyLabel">Walk</span></div>
+<div id="caption" class="chip" hidden aria-live="polite"></div>
+
+<aside id="drawer" class="chip" hidden aria-label="All prints in the stall">
+  <div class="top"><div><h2>Every print</h2><p>Grouped by what it is printed on. Tap one to walk to it.</p></div>
+  <button class="x" id="drawerClose" aria-label="Close list"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
+  <div id="groups"></div>
+</aside>
+
+<div id="box" hidden role="dialog" aria-modal="true" aria-label="Print preview">
+  <button class="x chip" id="boxClose" aria-label="Close preview"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  <figure><img id="boxImg" alt=""><figcaption><strong id="boxName"></strong><span id="boxMeta"></span></figcaption></figure>
+</div>
+
+<div id="hint" class="chip"><span class="desk-only">Drag to look · tap a print</span><span class="touch-only">Swipe to look · joystick to walk</span></div>
+<div id="loading"><div><strong>Setting up the stall</strong><span id="loadPct">0%</span></div></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(function () {
+  // Units are feet. Stall: x -5..5 (left..right as you face it), z -5 (back wall) .. 5 (aisle edge), y up.
+  const C = { plum: 0x4B2451, deep: 0x321437, gold: 0xD4AF37, cream: 0xFFF9EE, alu: 0xB9B9BE, night: 0x120B14 };
+  const PNG = new Set(["dangler1", "dangler2", "dangler3", "photoframe"]);
+  const canvas = document.getElementById("scene");
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  const COARSE = window.matchMedia("(pointer: coarse)").matches;
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, COARSE ? 1.5 : 2));
+  renderer.outputEncoding = THREE.sRGBEncoding;
+  renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1b1419);
+  scene.fog = new THREE.Fog(0x1b1419, 26, 60);
+  const camera = new THREE.PerspectiveCamera(62, 1, 0.05, 200);
+  camera.rotation.order = "YXZ";
+  const maxAniso = renderer.capabilities.getMaxAnisotropy();
+
+  const manager = new THREE.LoadingManager();
+  const pct = document.getElementById("loadPct");
+  manager.onProgress = (u, l, t) => { pct.textContent = Math.round(l / t * 100) + "%"; };
+  manager.onLoad = () => { document.getElementById("loading").hidden = true; setTimeout(() => document.getElementById("hint").style.opacity = 0, 3500); };
+  const loader = new THREE.TextureLoader(manager);
+  const texCache = {};
+  const src = k => "tex/" + k + (PNG.has(k) ? ".png" : ".jpg");
+  function tex(k) {
+    if (!texCache[k]) { const t = loader.load(src(k)); t.encoding = THREE.sRGBEncoding; t.anisotropy = maxAniso; texCache[k] = t; }
+    return texCache[k];
+  }
+  const std = (color, o = {}) => new THREE.MeshStandardMaterial(Object.assign({ color, roughness: 0.85, metalness: 0 }, o));
+  function box(w, h, d, mat, x, y, z, ry = 0, parent = scene) {
+    const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    m.position.set(x, y, z); m.rotation.y = ry; m.castShadow = true; m.receiveShadow = true; parent.add(m); return m;
+  }
+
+  // ---------- registry of prints (clickable, listed in the drawer) ----------
+  const clickable = [], items = [];
+  function register(mesh, info, center, normal, size) {
+    mesh.userData.info = info; clickable.push(mesh);
+    if (!info.dup) items.push(Object.assign({ center, normal, size }, info));
+  }
+  // Upright print. rotY: 0 faces the aisle (+z), PI/2 faces +x, -PI/2 faces -x, PI faces the back wall.
+  function print(key, w, h, x, y, z, rotY, info, o = {}) {
+    const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = rotY; scene.add(g);
+    const mat = new THREE.MeshBasicMaterial({ map: tex(key), transparent: PNG.has(key), alphaTest: PNG.has(key) ? 0.5 : 0, side: o.double ? THREE.DoubleSide : THREE.FrontSide });
+    mat.toneMapped = false;
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), mat); m.position.z = (o.board || 0) / 2 + 0.003; g.add(m);
+    if (o.board) box(w, h, o.board, std(o.boardColor || 0xf4f1ea), 0, 0, 0, 0, g);
+    if (o.tilt) { g.rotation.order = "YXZ"; g.rotation.x = -o.tilt; }
+    register(m, Object.assign({ key }, info), new THREE.Vector3(x, y, z), new THREE.Vector3(Math.sin(rotY), 0, Math.cos(rotY)), Math.max(w, h));
+    return g;
+  }
+  // Fold-over tent: printed front leaning back, plain back panel. Base centre at (x, y, z).
+  function tent(key, w, h, x, y, z, rotY, info, backColor = C.deep, t = 0.28) {
+    const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = rotY; scene.add(g);
+    const dz = h * Math.sin(t);
+    const front = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex(key) }));
+    front.material.toneMapped = false;
+    front.position.set(0, h / 2 * Math.cos(t), dz / 2); front.rotation.x = -t; g.add(front);
+    const back = new THREE.Mesh(new THREE.PlaneGeometry(w, h), std(backColor, { side: THREE.DoubleSide }));
+    back.position.set(0, h / 2 * Math.cos(t), -dz / 2); back.rotation.x = t; g.add(back);
+    register(front, Object.assign({ key }, info), new THREE.Vector3(x, y + h / 2, z), new THREE.Vector3(Math.sin(rotY), 0, Math.cos(rotY)), Math.max(w, h));
+    return g;
+  }
+  // Print lying flat on a surface, readable from +z (before rotY)
+  function flat(key, w, h, x, y, z, rotY, info) {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex(key) }));
+    m.material.toneMapped = false; m.rotation.order = "YXZ"; m.rotation.y = rotY; m.rotation.x = -Math.PI / 2;
+    m.position.set(x, y, z); scene.add(m);
+    register(m, Object.assign({ key }, info), new THREE.Vector3(x, y, z), new THREE.Vector3(Math.sin(rotY) * 0.6, 0.8, Math.cos(rotY) * 0.6).normalize(), Math.max(w, h));
+    return m;
+  }
+  function stack(key, w, d, n, x, y, z, rotY, info) {
+    const s = box(w, 0.004 * n, d, std(0xf3eee6), x, y + 0.002 * n, z, rotY);
+    return flat(key, w, d, x, y + 0.004 * n + 0.002, z, rotY, info);
+  }
+
+  // ---------- hall + shell ----------
+  const hallFloor = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), std(0x4a4550, { roughness: 1 }));
+  hallFloor.rotation.x = -Math.PI / 2; hallFloor.receiveShadow = true; scene.add(hallFloor);
+  const carpet = new THREE.Mesh(new THREE.PlaneGeometry(10, 10), std(0x2a2026, { roughness: 1 }));
+  carpet.rotation.x = -Math.PI / 2; carpet.position.y = 0.01; carpet.receiveShadow = true; scene.add(carpet);
+  // neighbouring shell stalls, plain, so the aisle feels real
+  box(10, 8, 0.1, std(0xdedad4), -10.4, 4, -5.1); box(10, 8, 0.1, std(0xdedad4), 10.4, 4, -5.1);
+  // across the aisle
+  box(30, 8, 0.12, std(0xd7d3cd), 0, 4, 15.5);
+  const H = 8;
+  const velvet = std(0x3a1740, { roughness: 0.95 });
+  box(10, H, 0.1, std(0xeeeae5), 0, H / 2, -5.05);                       // back wall panel
+  box(0.1, H, 10, velvet, -5.05, H / 2, 0); box(0.1, H, 10, velvet, 5.05, H / 2, 0);  // side walls: plum velvet
+  // curtain pleats
+  for (let z = -4.8; z < 5; z += 0.45) { box(0.08, H - 0.1, 0.18, velvet, -4.98, H / 2, z); box(0.08, H - 0.1, 0.18, velvet, 4.98, H / 2, z); }
+  // aluminium posts + top rails
+  const alu = std(C.alu, { metalness: 0.7, roughness: 0.35 });
+  [[-5, -5], [5, -5], [-5, 5], [5, 5]].forEach(([x, z]) => box(0.16, H + 0.6, 0.16, alu, x, (H + 0.6) / 2, z));
+  box(10.2, 0.12, 0.12, alu, 0, H, -5); box(0.12, 0.12, 10.2, alu, -5, H, 0); box(0.12, 0.12, 10.2, alu, 5, H, 0);
+  // fascia board over the front
+  box(10.3, 1.1, 0.12, std(C.deep), 0, 8.05, 5.02);
+  print("fascia", 8, 1, 0, 8.05, 5.09, 0, { name: "Top name board", size: "8 × 1 ft", mat: "Flex", where: "On the fascia board above the stall front" });
+  // marigold swag under the fascia + fairy lights along the rails
+  const mari = new THREE.MeshStandardMaterial({ color: 0xF08A12, roughness: 0.9, emissive: 0x401800 });
+  const sph = new THREE.SphereGeometry(0.075, 8, 6);
+  for (let i = 0; i <= 80; i++) { const x = -5 + i / 8; const sag = 0.28 * Math.abs(Math.sin(Math.PI * (x + 5) / 2.5)); const m = new THREE.Mesh(sph, mari); m.position.set(x, 7.45 - sag, 5.12); scene.add(m); }
+  const bulb = new THREE.MeshBasicMaterial({ color: 0xFFD98A });
+  const bg = new THREE.SphereGeometry(0.03, 6, 4);
+  for (let i = 0; i <= 40; i++) { const t = i / 40; [[-5 + 10 * t, 7.92, -4.92], [-4.92, 7.92, -5 + 10 * t], [4.92, 7.92, -5 + 10 * t]].forEach(p => { const m = new THREE.Mesh(bg, bulb); m.position.set(...p); scene.add(m); }); }
+
+  // ---------- back wall flex ----------
+  print("backwall", 8, 7, 0, 4.0, -4.99, 0, { name: "Back wall", size: "8 × 7 ft", mat: "Flex", where: "Pasted on the back wall panel" });
+
+  // ---------- front table: tester bar (6 × 2.5 ft) ----------
+  const cloth = std(0x2a0f2e, { roughness: 1 });
+  box(6, 2.5, 2.5, cloth, -2, 1.25, 3.75);
+  print("banner", 6, 2.5, -2, 1.25, 5.005, 0, { name: "Front table banner", size: "6 × 2.5 ft", mat: "Flex", where: "Across the front of the tester table" });
+  const SECTIONS = [
+    { key: "section1", name: "Morning Light", scents: ["citrus_reverence", "glacial_instinct", "emerald_vale", "sylvan_radiance", "terra_absolu"] },
+    { key: "section2", name: "Velvet Embers", scents: ["velour_roast", "amber_pulse", "midnight_bloom", "midnight_ruse"] },
+    { key: "section3", name: "The Oud Darbar", scents: ["majestic_eclipse", "desert_eclipse", "crimson_veil", "obsidian_reverie"] },
+    { key: "section4", name: "Noir Library", scents: ["velvet_authority", "noir_suede", "imperial_legacy", "midnight_horizon"] },
+    { key: "section5", name: "Silk Garden", scents: ["golden_bloom", "femme_tempest", "fleur_pale", "ivory_resonance"] },
+  ];
+  const glass = new THREE.MeshStandardMaterial({ color: 0xf2efe6, transparent: true, opacity: 0.38, roughness: 0.05, metalness: 0.1 });
+  const juice = new THREE.MeshStandardMaterial({ color: 0xE8C77A, transparent: true, opacity: 0.55, roughness: 0.2 });
+  const capM = std(0x111111, { roughness: 0.4 }), goldM = std(C.gold, { metalness: 0.8, roughness: 0.3 });
+  function bottle(x, y, z, label, ry = 0, liquid = juice) {
+    const g = new THREE.Group(); g.position.set(x, y, z); g.rotation.y = ry; scene.add(g);
+    const b = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.36, 0.14), glass); b.position.y = 0.18; g.add(b);
+    const l = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.28, 0.12), liquid); l.position.y = 0.15; g.add(l);
+    const n = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.05, 12), goldM); n.position.y = 0.385; g.add(n);
+    const c = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.13, 16), capM); c.position.y = 0.475; g.add(c);
+    if (label) {
+      const lm = new THREE.Mesh(new THREE.PlaneGeometry(0.19, 0.114), new THREE.MeshBasicMaterial({ map: tex("label_" + label) }));
+      lm.material.toneMapped = false; lm.position.set(0, 0.17, 0.0715); g.add(lm);
+      register(lm, { key: "label_" + label, name: "Tester labels ×21", size: "63.5 × 38.1 mm", mat: "Sticker paper", where: "On each tester bottle (21 labels, one Avery L7160 sheet)", dup: labelDone++ > 0 }, new THREE.Vector3(x, y + 0.2, z), new THREE.Vector3(0, 0, 1), 0.2);
+    }
+    return g;
+  }
+  let labelDone = 0;
+  const riserM = std(0x15100f, { roughness: 0.6 });
+  const xs = [-4.4, -3.2, -2.0, -0.8, 0.4];
+  SECTIONS.forEach((s, i) => {
+    const x = xs[i];
+    box(1.12, 0.32, 0.6, riserM, x, 2.5 + 0.16, 2.95);
+    print("shelf" + (i + 1), 0.97, 0.29, x, 2.66, 3.252, 0, { name: "Shelf strip " + (i + 1), size: "297 × 89 mm", mat: "Sunboard or card", where: "On the front of each tester riser", dup: i > 0 });
+    s.scents.forEach((k, j) => bottle(x + (j - (s.scents.length - 1) / 2) * 0.215, 2.82, 2.95, k));
+    tent(s.key, 0.69, 0.24, x, 2.5, 3.65, 0, { name: "Section card · " + s.name, size: "front 210 × 74 mm", mat: "Card, half A4 folded", where: "In front of each tester group" });
+  });
+  // front edge of the tester table
+  const brass = std(0xB08D3C, { metalness: 0.85, roughness: 0.3 });
+  const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.13, 0.36, 24, 1, true), brass); cup.material.side = THREE.DoubleSide; cup.position.set(-4.55, 2.68, 4.45); scene.add(cup);
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const st = new THREE.Mesh(new THREE.PlaneGeometry(0.043, 0.46), new THREE.MeshBasicMaterial({ map: tex("strip"), side: THREE.DoubleSide }));
+    st.material.toneMapped = false;
+    st.position.set(-4.55 + Math.cos(a) * 0.06, 2.85, 4.45 + Math.sin(a) * 0.06); st.rotation.set(Math.sin(a) * 0.18, -a, Math.cos(a) * 0.18); scene.add(st);
+    if (i === 0) register(st, { key: "strip", name: "Testing strips", size: "13 × 140 mm · 30 per A4 · one sheet per scent", mat: "300 gsm white uncoated card", where: "In a brass cup at the left end of the tester table" }, new THREE.Vector3(-4.55, 2.85, 4.45), new THREE.Vector3(0, 0.2, 1).normalize(), 0.6);
+  }
+  const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.22, 24, 12, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2), brass); bowl.position.set(-1.05, 2.72, 4.45); bowl.rotation.x = Math.PI; scene.add(bowl);
+  const beans = new THREE.Mesh(new THREE.CircleGeometry(0.2, 24), std(0x3b2414)); beans.rotation.x = -Math.PI / 2; beans.position.set(-1.05, 2.71, 4.45); scene.add(beans);
+  print("coffee", 0.34, 0.49, -0.55, 2.76, 4.4, -0.15, { name: "Coffee beans card", size: "A6", mat: "Card in an acrylic stand", where: "Next to the coffee-bean bowl" }, { tilt: 0.18 });
+  print("heroes", 0.97, 0.69, 0.45, 2.86, 4.35, -0.12, { name: "Start with our heroes", size: "A4 landscape", mat: "Sunboard", where: "Front right of the tester table" }, { tilt: 0.2, board: 0.02 });
+  tent("review_tent", 0.69, 0.24, -2.6, 2.5, 4.55, 0, { name: "Review QR · table card", size: "front 210 × 74 mm", mat: "Card, half A4 folded", where: "Front of the tester table, where people finish testing" });
+  // diyas
+  [-4.1, 0.95].forEach(x => { const d = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.05, 0.07, 16), std(0x9b5a2a)); d.position.set(x, 2.54, 4.75); scene.add(d); const f = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), new THREE.MeshBasicMaterial({ color: 0xFFC860 })); f.position.set(x, 2.62, 4.75); scene.add(f); });
+
+  // ---------- left wall: the collection (21 tent cards on 3 steps) ----------
+  box(1.5, 2.6, 4.9, cloth, -4.25, 1.3, -0.2);
+  const tiers = [{ x: -3.78, y: 2.6 }, { x: -4.22, y: 2.9 }, { x: -4.66, y: 3.2 }];
+  tiers.slice(1).forEach(t => box(0.44, t.y - 2.6, 4.8, riserM, t.x, 2.6 + (t.y - 2.6) / 2, -0.2));
+  const TENTS = ["amber_pulse", "citrus_reverence", "crimson_veil", "desert_eclipse", "emerald_vale", "femme_tempest", "fleur_pale", "glacial_instinct", "golden_bloom", "imperial_legacy", "ivory_resonance", "majestic_eclipse", "midnight_bloom", "midnight_horizon", "midnight_ruse", "noir_suede", "obsidian_reverie", "sylvan_radiance", "terra_absolu", "velour_roast", "velvet_authority"];
+  const nice = k => k.split("_").map(w => w[0].toUpperCase() + w.slice(1)).join(" ");
+  TENTS.forEach((k, i) => {
+    const t = tiers[Math.floor(i / 7)], j = i % 7;
+    tent("tent_" + k, 0.49, 0.34, t.x, t.y, -2.25 + j * 0.645, Math.PI / 2, { name: "Tent card · " + nice(k), size: "A5 folded to A6", mat: "300 gsm card", where: "Collection wall, three steps, 7 per step", dup: i > 0 });
+  });
+  items.find(it => it.key === "tent_amber_pulse").name = "Tent cards ×21 (one per scent)";
+  print("scentfinder", 1.38, 1.95, -4.9, 5.15, -1.25, Math.PI / 2, { name: "Scent finder", size: "A2", mat: "Sunboard", where: "Left wall, above the collection" }, { board: 0.02 });
+  print("menu", 1.38, 1.95, -4.9, 5.15, 0.85, Math.PI / 2, { name: "Full collection menu", size: "A2", mat: "Sunboard", where: "Left wall, above the collection" }, { board: 0.02 });
+  print("testing", 0.97, 1.38, -4.9, 5.1, 2.95, Math.PI / 2, { name: "How to test", size: "A3", mat: "Sunboard", where: "Left wall, above the tester table" }, { board: 0.02 });
+  print("sectionguide", 0.69, 0.97, -4.9, 5.2, 4.2, Math.PI / 2, { name: "Find your section (guide)", size: "A4", mat: "Sunboard", where: "Left wall, at the start of the tester table" }, { board: 0.02 });
+  // standee: Diwali gifts, back-left corner
+  const stand = (key, x, z, ry, info) => { const g = print(key, 2.5, 6, x, 3.25, z, ry, info); box(2.6, 0.16, 0.5, alu, 0, -3.17, 0, 0, g); return g; };
+  stand("standee_gifts", -3.7, -3.9, 0.55, { name: "Roll-up standee · Diwali gifts", size: "2.5 × 6 ft", mat: "Roll-up standee", where: "Back left corner, angled to the aisle" });
+
+  // ---------- back: attar station ----------
+  box(4, 2.5, 1.8, cloth, 1.3, 1.25, -2.7);
+  const amber = new THREE.MeshStandardMaterial({ color: 0x7a3306, transparent: true, opacity: 0.95, roughness: 0.15, emissive: 0x2a0e00 });
+  for (let i = 0; i < 8; i++) bottle(-0.35 + i * 0.47, 2.5, -3.35, null, 0, amber);
+  const tray = new THREE.Mesh(new THREE.CylinderGeometry(0.62, 0.62, 0.04, 40), brass); tray.position.set(1.3, 2.52, -2.45); scene.add(tray);
+  for (let i = 0; i < 5; i++) { const b = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.14, 10), glass); b.position.set(1.0 + i * 0.15, 2.61, -2.4); scene.add(b); }
+  // the attar column
+  box(1.15, 4.4, 1.15, std(C.deep, { roughness: 0.7 }), -1.45, 2.2, -2.6);
+  box(1.25, 0.08, 1.25, goldM, -1.45, 4.44, -2.6);
+  print("attar_column", 0.97, 1.38, -1.45, 3.15, -2.02, 0, { name: "The Attar Station", size: "A3 portrait", mat: "Sunboard", where: "On the front of the attar column" }, { board: 0.02 });
+  print("sizes", 0.97, 1.38, 2.95, 3.2, -2.1, -0.35, { name: "Sizes board", size: "A3", mat: "Sunboard on a table easel", where: "Right end of the attar table" }, { tilt: 0.15, board: 0.02 });
+
+  // ---------- right side: billing counter + QR wall ----------
+  box(1.5, 3, 2.4, cloth, 4.2, 1.5, -0.05);
+  print("billing", 0.69, 0.97, 3.55, 3.5, 0.75, -Math.PI / 2, { name: "Billing counter sign", size: "A4", mat: "Sunboard in an L-stand", where: "On the billing counter" }, { tilt: 0.18, board: 0.02 });
+  print("shoponline", 0.69, 0.97, 3.55, 3.5, -0.85, -Math.PI / 2, { name: "Shop online + Instagram QR", size: "A4", mat: "Sunboard in an L-stand", where: "On the billing counter" }, { tilt: 0.18, board: 0.02 });
+  stack("biz_front", 0.29, 0.17, 20, 3.75, 3.0, -0.05, -Math.PI / 2, { name: "Business card", size: "89 × 51 mm", mat: "350–400 gsm card", where: "Stack on the billing counter" });
+  stack("take_front", 0.29, 0.17, 20, 3.75, 3.0, 0.3, -Math.PI / 2, { name: "Takeaway card", size: "89 × 51 mm", mat: "350 gsm card", where: "Stack on the billing counter" });
+  stack("thanks_front", 0.34, 0.49, 30, 4.25, 3.0, 0.05, -Math.PI / 2, { name: "Thank-you card", size: "A6", mat: "350 gsm card", where: "Goes into every bag" });
+  stack("review_card", 0.29, 0.17, 20, 3.75, 3.0, 0.62, -Math.PI / 2, { name: "Review QR · bag card", size: "89 × 51 mm", mat: "350 gsm card", where: "Billing counter, one in every bag" });
+  stack("gifttag", 0.17, 0.29, 15, 4.25, 3.0, -0.55, -Math.PI / 2, { name: "Gift tag", size: "2 × 3.5 in", mat: "350 gsm card", where: "Billing counter, for gift boxes" });
+  flat("sticker", 0.17, 0.17, 3.85, 3.004, -0.45, -Math.PI / 2, { name: "Round logo sticker", size: "2 in", mat: "Gloss sticker paper", where: "Billing counter, for bags and boxes" });
+  box(0.75, 0.03, 1.0, std(0x6b4a2a), 4.55, 3.015, 0.85);
+  flat("staffsheet", 0.62, 0.88, 4.55, 3.035, 0.85, -Math.PI / 2, { name: "Staff cheat sheet (and the other staff sheets)", size: "A4", mat: "Plain paper on a clipboard", where: "Behind the billing counter" });
+  box(0.25, 0.04, 0.4, std(0x222222), 4.5, 3.02, -0.95);
+  print("qr_corporate", 0.69, 0.97, 4.9, 5.15, -0.55, -Math.PI / 2, { name: "Corporate bookings QR", size: "A4", mat: "Sunboard", where: "Right wall, above billing" }, { board: 0.02 });
+  print("qr_wedding", 0.69, 0.97, 4.9, 5.15, 0.45, -Math.PI / 2, { name: "Wedding planners QR", size: "A4", mat: "Sunboard", where: "Right wall, above billing" }, { board: 0.02 });
+  print("giftsets", 0.97, 1.38, 4.9, 5.0, -2.75, -Math.PI / 2, { name: "Diwali gift sets board", size: "A3", mat: "Sunboard", where: "Right wall, by the attar station" }, { board: 0.02 });
+  print("whylasts", 0.97, 1.38, 4.9, 5.0, 1.9, -Math.PI / 2, { name: "Why it lasts", size: "A3", mat: "Sunboard", where: "Right wall" }, { board: 0.02 });
+  print("photoframe", 2, 1.5, 4.88, 4.7, 3.75, -Math.PI / 2, { name: "Selfie frame prop", size: "24 × 18 in", mat: "5 mm sunboard, centre cut out", where: "Hung by the entrance; people take it down for photos" }, { double: false });
+
+  // ---------- danglers from the top rails ----------
+  const string = new THREE.LineBasicMaterial({ color: 0xcccccc });
+  [["dangler1", -2.2, 1.2], ["dangler2", 0.6, -0.6], ["dangler3", 2.7, 2.6]].forEach(([k, x, z], i) => {
+    const g = new THREE.Group(); g.position.set(x, 6.7, z); g.rotation.y = -0.4 + i * 0.4; scene.add(g);
+    [0, Math.PI].forEach((r, s) => {
+      const m = new THREE.Mesh(new THREE.CircleGeometry(0.5, 48), new THREE.MeshBasicMaterial({ map: tex(k) }));
+      m.material.toneMapped = false; m.rotation.y = r; m.position.z = s ? -0.005 : 0.005; g.add(m);
+      if (!s) register(m, { key: k, name: "Hanging dangler " + (i + 1), size: "12 in circle, both sides", mat: "Sunboard", where: "Hung from the top rails" }, new THREE.Vector3(x, 6.7, z), new THREE.Vector3(Math.sin(g.rotation.y), 0, Math.cos(g.rotation.y)), 1);
+    });
+    const geo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x, 7.2, z), new THREE.Vector3(x, 8, z)]);
+    scene.add(new THREE.Line(geo, string));
+  });
+
+  // ---------- aisle: hero standee + direction signs ----------
+  stand("standee_hero", 6.1, 5.9, -0.35, { name: "Roll-up standee · Made to last", size: "2.5 × 6 ft", mat: "Roll-up standee", where: "In the aisle at the front right corner (if the organiser allows)" });
+  const pole = (x, z) => { box(0.08, 4, 0.08, alu, x, 2, z); box(0.9, 0.06, 0.9, alu, x, 0.03, z); };
+  pole(-11, 9); print("dir_right", 1.38, 0.97, -11, 4.4, 9, -Math.PI / 2 + 0.25, { name: "Direction sign · arrow right", size: "A3 landscape", mat: "Sunboard on a pole stand", where: "Down the aisle to the left, pointing at the stall" }, { board: 0.03 });
+  pole(11, 9); print("dir_left", 1.38, 0.97, 11, 4.4, 9, Math.PI / 2 - 0.25, { name: "Direction sign · arrow left", size: "A3 landscape", mat: "Sunboard on a pole stand", where: "Down the aisle to the right, pointing at the stall" }, { board: 0.03 });
+
+  // ---------- lights ----------
+  scene.add(new THREE.HemisphereLight(0xfff1e0, 0x2a1f2c, 0.6));
+  scene.add(new THREE.AmbientLight(0xffffff, 0.18));
+  const key = new THREE.DirectionalLight(0xfff0dc, 0.55); key.position.set(4, 14, 12); key.castShadow = true;
+  key.shadow.mapSize.set(COARSE ? 1024 : 2048, COARSE ? 1024 : 2048); Object.assign(key.shadow.camera, { left: -9, right: 9, top: 9, bottom: -9 }); scene.add(key);
+  [[-2, 7.6, 3.5], [1.3, 7.6, -2.5], [-3.8, 7.6, -0.2], [3.8, 7.6, 0]].forEach(p => { const l = new THREE.PointLight(0xffd7a0, 0.45, 9, 2); l.position.set(...p); scene.add(l); });
+
+  // ---------- walking ----------
+  const EYE = 5.25;
+  const solid = [ // x0, x1, z0, z1 (footprints you can't walk through)
+    [-5.1, 1.0, 2.5, 5.0], [-5.1, -3.5, -2.65, 2.25], [-0.7, 3.3, -3.6, -1.8], [-2.05, -0.85, -3.2, -2.0], [3.45, 5.1, -1.25, 1.15],
+    [-5.3, -4.9, -5.3, 5.0], [4.9, 5.3, -5.3, 5.0], [-5.3, 5.3, -5.4, -4.9], [-4.9, -2.6, -4.8, -3.0]];
+  const inside = (x, z) => solid.some(b => x > b[0] - 0.3 && x < b[1] + 0.3 && z > b[2] - 0.3 && z < b[3] + 0.3);
+  const state = { x: 1.5, y: EYE, z: 13, yaw: 0, pitch: -0.12 };
+  function lookAtFrom(px, py, pz, tx, ty, tz) {
+    const dx = tx - px, dy = ty - py, dz = tz - pz;
+    return { x: px, y: py, z: pz, yaw: Math.atan2(-dx, -dz), pitch: Math.atan2(dy, Math.hypot(dx, dz)) };
+  }
+  Object.assign(state, lookAtFrom(1.5, EYE, 13, 0, 4, 0));
+  let tween = null;
+  function flyTo(t, ms = 1100) {
+    let dy = t.yaw - state.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+    tween = { from: Object.assign({}, state), to: Object.assign({}, t, { yaw: state.yaw + dy }), t0: performance.now(), ms };
+  }
+  const VIEWS = [
+    ["From the aisle", [1.5, EYE, 13, 0, 4, 0]],
+    ["Tester table", [-2, EYE, 7.6, -2, 2.6, 3.2]],
+    ["Collection wall", [-0.4, EYE, 0.2, -4.6, 3.6, -0.2]],
+    ["Attar station", [0.9, EYE, 1.6, 0.4, 3.2, -3.6]],
+    ["Billing + QR wall", [0.4, EYE, 0.1, 4.8, 4.2, 0]],
+    ["Staff view", [0.9, EYE, -4.3, 0, 3.2, 5]],
+    ["Walk-in", [2.6, EYE, 4.2, -1.5, 3.5, -3.5]],
+    ["Overview", [12, 17, 17, 0, 1.5, 0]],
+  ];
+  const nav = document.getElementById("views");
+  VIEWS.forEach(([label, v], i) => {
+    const b = document.createElement("button"); b.className = "chip btn"; b.textContent = label; b.setAttribute("aria-pressed", i === 0);
+    b.addEventListener("click", () => { stopTour(); nav.querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", x === b)); flyTo(lookAtFrom(...v)); });
+    nav.appendChild(b);
+  });
+  const TOK = ["aisle", "tester", "collection", "attar", "billing", "staff", "walkin", "overview"];
+  const hv = TOK.indexOf(location.hash.slice(1));
+  if (hv > 0) { Object.assign(state, lookAtFrom(...VIEWS[hv][1])); nav.querySelectorAll("button").forEach((x, i) => x.setAttribute("aria-pressed", i === hv)); }
+
+  // pointer look + tap to open a print
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
+  let drag = null;
+  canvas.addEventListener("pointerdown", e => { drag = { x: e.clientX, y: e.clientY, moved: 0, id: e.pointerId }; canvas.classList.add("dragging"); try { canvas.setPointerCapture(e.pointerId); } catch (_) {} });
+  canvas.addEventListener("pointermove", e => {
+    if (!drag || e.pointerId !== drag.id) return;
+    const dx = e.clientX - drag.x, dy = e.clientY - drag.y; drag.x = e.clientX; drag.y = e.clientY; drag.moved += Math.abs(dx) + Math.abs(dy);
+    stopTour(); tween = null; const k = COARSE ? 0.006 : 0.005; state.yaw -= dx * k; state.pitch = Math.max(-1.35, Math.min(1.2, state.pitch - dy * k));
+  });
+  canvas.addEventListener("pointerup", e => {
+    canvas.classList.remove("dragging");
+    if (drag && drag.moved < 6) {
+      const r = canvas.getBoundingClientRect();
+      ndc.set((e.clientX - r.left) / r.width * 2 - 1, -(e.clientY - r.top) / r.height * 2 + 1);
+      ray.setFromCamera(ndc, camera);
+      const hit = ray.intersectObjects(clickable, false)[0];
+      if (hit) openBox(hit.object.userData.info);
+    }
+    drag = null;
+  });
+  const keys = new Set();
+  const KEYMAP = { KeyW: "f", ArrowUp: "f", KeyS: "b", ArrowDown: "b", KeyA: "l", ArrowLeft: "l", KeyD: "r", ArrowRight: "r" };
+  canvas.tabIndex = 0;
+  window.addEventListener("keydown", e => { if (KEYMAP[e.code]) stopTour(); if (!box_.hidden || e.target.closest && e.target.closest("button")) return; if (KEYMAP[e.code]) { keys.add(KEYMAP[e.code]); e.preventDefault(); } });
+  window.addEventListener("keyup", e => { if (KEYMAP[e.code]) keys.delete(KEYMAP[e.code]); });
+  // joystick: knob offset sets walking direction and speed
+  const joyEl = document.getElementById("joy"), knob = document.getElementById("knob");
+  const joy = { x: 0, y: 0, id: null };
+  const R = 44;
+  function joyMove(e) {
+    const r = joyEl.getBoundingClientRect();
+    let dx = e.clientX - (r.left + r.width / 2), dy = e.clientY - (r.top + r.height / 2);
+    const m = Math.hypot(dx, dy); if (m > R) { dx = dx / m * R; dy = dy / m * R; }
+    joy.x = dx / R; joy.y = dy / R; knob.style.transform = `translate(${dx}px, ${dy}px)`;
+  }
+  function joyEnd() { joy.id = null; joy.x = joy.y = 0; knob.style.transform = "translate(0, 0)"; joyEl.classList.remove("active"); }
+  joyEl.addEventListener("pointerdown", e => { e.preventDefault(); stopTour(); joy.id = e.pointerId; joyEl.classList.add("active"); joyMove(e); try { joyEl.setPointerCapture(e.pointerId); } catch (_) {} });
+  joyEl.addEventListener("pointermove", e => { if (e.pointerId === joy.id) joyMove(e); });
+  ["pointerup", "pointercancel", "lostpointercapture"].forEach(ev => joyEl.addEventListener(ev, e => { if (e.pointerId === joy.id) joyEnd(); }));
+
+  // guided tour
+  const TOUR = [
+    [0, "The stall from the aisle: name board, front banner and the standee"],
+    [1, "The tester table: 21 testers in five sections"],
+    [2, "The collection wall: every scent on three steps"],
+    [3, "The attar station, in front of the back wall"],
+    [4, "Billing, the QR wall and the review cards"],
+    [6, "Looking in from the walk-in"],
+    [7, "The whole stall from above"],
+  ];
+  const tourBtn = document.getElementById("tourBtn"), cap = document.getElementById("caption");
+  let tourTimer = null, tourStep = 0;
+  function stopTour() { if (tourTimer === null) return; clearTimeout(tourTimer); tourTimer = null; cap.hidden = true; tourBtn.setAttribute("aria-pressed", "false"); tourBtn.textContent = "Take the tour"; }
+  function tourNext() {
+    const [vi, text] = TOUR[tourStep];
+    nav.querySelectorAll("button").forEach((x, i) => x.setAttribute("aria-pressed", i === vi));
+    flyTo(lookAtFrom(...VIEWS[vi][1]), 2400); cap.textContent = text; cap.hidden = false;
+    tourStep += 1;
+    tourTimer = setTimeout(() => { if (tourStep < TOUR.length) tourNext(); else stopTour(); }, 5600);
+  }
+  tourBtn.addEventListener("click", () => {
+    if (tourTimer !== null) { stopTour(); return; }
+    setDrawer(false); tourStep = 0; tourBtn.setAttribute("aria-pressed", "true"); tourBtn.textContent = "Stop tour"; tourTimer = 0; tourNext();
+  });
+
+  // lightbox
+  const box_ = document.getElementById("box");
+  function openBox(info) {
+    document.getElementById("boxImg").src = src(info.key);
+    document.getElementById("boxImg").alt = info.name;
+    document.getElementById("boxName").textContent = info.name;
+    document.getElementById("boxMeta").textContent = [info.size, info.mat, info.where].filter(Boolean).join(" · ");
+    box_.hidden = false; document.getElementById("boxClose").focus();
+  }
+  const closeBox = () => { box_.hidden = true; };
+  document.getElementById("boxClose").addEventListener("click", closeBox);
+  box_.addEventListener("click", e => { if (e.target === box_) closeBox(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { closeBox(); setDrawer(false); } });
+
+  // drawer: every print, grouped by material
+  const drawer = document.getElementById("drawer"), allBtn = document.getElementById("allBtn");
+  function setDrawer(open) { drawer.hidden = !open; allBtn.setAttribute("aria-expanded", open); }
+  allBtn.addEventListener("click", () => setDrawer(drawer.hidden));
+  document.getElementById("drawerClose").addEventListener("click", () => setDrawer(false));
+  const ORDER = ["Flex", "Roll-up standee", "Sunboard", "Card", "Sticker paper", "Plain paper"];
+  const groupOf = m => /Flex/.test(m) ? "Flex" : /standee/i.test(m) ? "Roll-up standee" : /[Ss]unboard/.test(m) ? "Sunboard" : /sticker/i.test(m) ? "Sticker paper" : /Plain paper/.test(m) ? "Plain paper" : "Card";
+  const groupsEl = document.getElementById("groups");
+  ORDER.forEach(g => {
+    const list = items.filter(it => groupOf(it.mat) === g); if (!list.length) return;
+    const h = document.createElement("h3"); h.textContent = g + " · " + list.length; groupsEl.appendChild(h);
+    const ul = document.createElement("ul"); groupsEl.appendChild(ul);
+    list.forEach(it => {
+      const li = document.createElement("li"), b = document.createElement("button");
+      const a = document.createElement("span"), s = document.createElement("span"); a.textContent = it.name; s.textContent = it.size; b.append(a, s);
+      b.addEventListener("click", () => { stopTour(); setDrawer(window.innerWidth > 900); goTo(it); });
+      li.appendChild(b); ul.appendChild(li);
+    });
+  });
+  function goTo(it) {
+    const d = Math.max(1.6, Math.min(12, it.size * 1.25 + 1.0));
+    const n = it.normal, c = it.center;
+    const px = c.x + n.x * d, pz = c.z + n.z * d, py = Math.max(c.y + 0.5 + n.y * d, Math.min(EYE, c.y + 1.6));
+    flyTo(lookAtFrom(px, py, pz, c.x, c.y, c.z));
+  }
+
+  // ---------- loop ----------
+  function resize() { const w = window.innerWidth, h = window.innerHeight; renderer.setSize(w, h, false); camera.aspect = w / h; camera.updateProjectionMatrix(); }
+  window.addEventListener("resize", resize); resize();
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(0.05, (now - last) / 1000); last = now;
+    if (tween) {
+      let k = Math.min(1, (now - tween.t0) / (reduce ? 1 : tween.ms)); const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+      ["x", "y", "z", "yaw", "pitch"].forEach(p => state[p] = tween.from[p] + (tween.to[p] - tween.from[p]) * e);
+      if (k >= 1) tween = null;
+    }
+    let fwd = (keys.has("f") ? 1 : 0) - (keys.has("b") ? 1 : 0) - joy.y;
+    let side = (keys.has("r") ? 1 : 0) - (keys.has("l") ? 1 : 0) + joy.x;
+    const mag = Math.min(1, Math.hypot(fwd, side));
+    if (mag > 0.08) {
+      tween = null;
+      const sp = 4.2 * dt * mag, fx = -Math.sin(state.yaw), fz = -Math.cos(state.yaw);
+      let mx = fx * fwd - fz * side, mz = fz * fwd + fx * side;
+      const len = Math.hypot(mx, mz) || 1; mx = mx / len * sp; mz = mz / len * sp;
+      if (state.y > EYE + 0.5) state.y = Math.max(EYE, state.y - 6 * dt);
+      const was = inside(state.x, state.z);
+      const nx = Math.max(-14, Math.min(14, state.x + mx)), nz = Math.max(-4.6, Math.min(14.8, state.z + mz));
+      if (was || !inside(nx, state.z)) state.x = nx;
+      if (was || !inside(state.x, nz)) state.z = nz;
+    }
+    camera.position.set(state.x, state.y, state.z); camera.rotation.set(state.pitch, state.yaw, 0);
+    renderer.render(scene, camera);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body>
+</html>
